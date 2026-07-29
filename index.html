@@ -1,0 +1,1263 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#f5f5f7">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="description" content="绘画约稿订单管理、交稿预警、收支记账工作台">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="favicon.png">
+<title>绘画约稿工作台</title>
+<style>
+/* ============ 设计令牌（浅色主题）============ */
+:root{
+  --bg:#f5f5f7;
+  --surface:#ffffff;
+  --surface-2:#f0f0f3;
+  --surface-3:#e8e8ec;
+  --border:rgba(0,0,0,.08);
+  --border-strong:rgba(0,0,0,.14);
+  --text:#1a1a1f;
+  --text-2:#6b6b76;
+  --text-3:#9a9aa6;
+  --accent:#d97706;
+  --accent-soft:rgba(217,119,6,.12);
+  --accent-2:#b45309;
+  --green:#059669;
+  --green-soft:rgba(5,150,105,.12);
+  --red:#dc2626;
+  --red-soft:rgba(220,38,38,.10);
+  --blue:#2563eb;
+  --blue-soft:rgba(37,99,235,.10);
+  --purple:#9333ea;
+  --purple-soft:rgba(147,51,234,.10);
+  --radius:16px;
+  --radius-sm:12px;
+  --radius-xs:8px;
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+  --tab-h:62px;
+}
+
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Microsoft YaHei",sans-serif,"Noto Color Emoji","Segoe UI Emoji";
+  background:var(--bg);
+  color:var(--text);
+  font-size:15px;
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+  padding-bottom:calc(var(--tab-h) + var(--safe-bottom));
+}
+input,textarea,select,button{font-family:inherit;font-size:inherit;color:inherit}
+button{border:none;background:none;cursor:pointer}
+a{color:inherit;text-decoration:none}
+
+/* ============ 顶部状态栏占位 ============ */
+.status-spacer{height:var(--safe-top);background:var(--bg);position:fixed;top:0;left:0;right:0;z-index:200}
+
+/* ============ 页面容器 ============ */
+.page{display:none;min-height:100vh;padding-top:var(--safe-top)}
+.page.active{display:block}
+
+/* ============ 顶部Header ============ */
+.app-header{
+  position:sticky;top:var(--safe-top);z-index:50;
+  background:rgba(245,245,247,.85);
+  backdrop-filter:saturate(180%) blur(20px);
+  -webkit-backdrop-filter:saturate(180%) blur(20px);
+  border-bottom:1px solid var(--border);
+  padding:14px 18px 12px;
+}
+.app-header h1{
+  font-size:18px;font-weight:600;letter-spacing:.3px;
+  display:flex;align-items:center;gap:8px;
+}
+.app-header .sub{font-size:12px;color:var(--text-3);margin-top:3px;font-weight:400}
+.app-header .date-pill{
+  font-size:11px;color:var(--text-2);
+  background:var(--surface-2);border:1px solid var(--border);
+  padding:3px 9px;border-radius:20px;display:inline-block;margin-top:6px;
+}
+
+/* ============ 置顶统计卡 ============ */
+.stats-wrap{
+  padding:14px 14px 6px;
+  display:grid;grid-template-columns:repeat(4,1fr);gap:8px;
+}
+.stat-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  padding:11px 8px 10px;
+  text-align:center;
+  position:relative;overflow:hidden;
+}
+.stat-card .num{font-size:19px;font-weight:700;letter-spacing:-.5px;line-height:1.1}
+.stat-card .label{font-size:10px;color:var(--text-3);margin-top:3px;letter-spacing:.2px}
+.stat-card.accent .num{color:var(--accent)}
+.stat-card.green .num{color:var(--green)}
+.stat-card.blue .num{color:var(--blue)}
+.stat-card.purple .num{color:var(--purple)}
+
+/* ============ 预警条 ============ */
+.alert-bar{
+  margin:10px 14px 0;
+  background:var(--red-soft);
+  border:1px solid rgba(248,113,113,.25);
+  border-radius:var(--radius-sm);
+  padding:10px 12px;
+  display:flex;align-items:flex-start;gap:8px;
+  font-size:12.5px;color:#b91c1c;
+}
+.alert-bar.hide{display:none}
+.alert-bar .ico{flex-shrink:0;font-size:14px;line-height:1.4}
+.alert-bar .txt{flex:1;line-height:1.45}
+.alert-bar .txt b{color:#991b1b;font-weight:600}
+
+/* ============ 区块标题 ============ */
+.sec-title{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:18px 18px 10px;
+}
+.sec-title h2{font-size:14px;font-weight:600;letter-spacing:.3px;color:var(--text)}
+.sec-title .cnt{font-size:12px;color:var(--text-3)}
+.sec-title .act{font-size:12px;color:var(--accent);font-weight:500}
+
+/* ============ 订单卡片 ============ */
+.order-list{padding:0 14px}
+.order-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:14px;
+  margin-bottom:10px;
+  position:relative;
+  transition:border-color .2s;
+}
+.order-card:active{border-color:var(--border-strong)}
+.order-card.urgent::before{
+  content:"";position:absolute;left:0;top:14px;bottom:14px;width:3px;
+  background:var(--red);border-radius:0 3px 3px 0;
+}
+.order-card .row1{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.order-card .cname{font-size:15px;font-weight:600;letter-spacing:.2px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.order-card .price{font-size:14px;font-weight:600;color:var(--accent);white-space:nowrap}
+.order-card .price .small{font-size:11px;color:var(--text-3);font-weight:400}
+.order-card .types{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:9px}
+.order-card .types span{
+  font-size:10.5px;padding:3px 8px;border-radius:6px;
+  background:var(--surface-3);color:var(--text-2);
+  border:1px solid var(--border);
+}
+.order-card .row2{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.order-card .deadline{font-size:11.5px;color:var(--text-2);display:flex;align-items:center;gap:4px}
+.order-card .deadline.warn{color:var(--red)}
+.order-card .deadline.soon{color:var(--accent-2)}
+.order-card .status-pill{
+  font-size:11px;font-weight:500;padding:3px 9px;border-radius:20px;
+  border:1px solid transparent;white-space:nowrap;
+}
+.order-card .tags{display:flex;gap:5px;margin-top:8px;flex-wrap:wrap}
+.order-card .tags span{font-size:10px;padding:2px 7px;border-radius:5px}
+.tag-urgent{background:var(--red-soft);color:#b91c1c}
+.tag-vip{background:var(--purple-soft);color:#7e22ce}
+.tag-comm{background:var(--blue-soft);color:#1d4ed8}
+.order-card .note{font-size:12px;color:var(--text-3);margin-top:8px;line-height:1.5;
+  background:var(--surface-2);padding:8px 10px;border-radius:var(--radius-xs);
+  border:1px solid var(--border);
+}
+.order-card .actions{display:flex;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+.order-card .actions button{
+  flex:1;font-size:11.5px;padding:7px 0;border-radius:8px;
+  background:var(--surface-2);color:var(--text-2);border:1px solid var(--border);
+  font-weight:500;
+}
+.order-card .actions button:active{background:var(--surface-3)}
+.order-card .actions button.danger{color:var(--red)}
+.order-card .actions button.primary{background:var(--accent-soft);color:var(--accent);border-color:rgba(251,191,36,.2)}
+
+/* 状态颜色 */
+/* 状态颜色（浅色主题）*/
+.st-pending{background:var(--surface-3);color:var(--text)}
+.st-sketch{background:var(--blue-soft);color:#1d4ed8}
+.st-confirm{background:var(--purple-soft);color:#7e22ce}
+.st-color{background:var(--purple-soft);color:#7e22ce}
+.st-final{background:var(--accent-soft);color:#b45309}
+.st-done{background:var(--green-soft);color:#047857}
+.st-pause{background:rgba(107,114,128,.12);color:#4b5563}
+
+/* ============ 空状态 ============ */
+.empty{
+  text-align:center;padding:60px 20px 40px;color:var(--text-3);
+}
+.empty .emoji{font-size:42px;margin-bottom:10px;opacity:.6}
+.empty p{font-size:13px}
+
+/* ============ 底部Tab ============ */
+.tabbar{
+  position:fixed;left:0;right:0;bottom:0;
+  height:calc(var(--tab-h) + var(--safe-bottom));
+  padding-bottom:var(--safe-bottom);
+  background:rgba(255,255,255,.92);
+  backdrop-filter:saturate(180%) blur(20px);
+  -webkit-backdrop-filter:saturate(180%) blur(20px);
+  border-top:1px solid var(--border);
+  display:flex;z-index:100;
+}
+.tab{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;color:var(--text-3);font-size:10.5px;font-weight:500;
+  transition:color .2s;
+}
+.tab .ico{font-size:20px;line-height:1}
+.tab.active{color:var(--accent)}
+.tab:active{color:var(--text-2)}
+
+/* ============ 表单 ============ */
+.form-wrap{padding:16px 16px 40px}
+.form-title{
+  text-align:center;padding:8px 0 18px;
+}
+.form-title .emoji{font-size:26px}
+.form-title h2{font-size:17px;font-weight:600;margin-top:6px;letter-spacing:.3px}
+.form-title .desc{font-size:12px;color:var(--text-3);margin-top:4px}
+
+.field{margin-bottom:16px}
+.field-label{
+  display:flex;align-items:center;gap:4px;
+  font-size:13px;font-weight:600;color:var(--text);
+  margin-bottom:7px;letter-spacing:.2px;
+}
+.field-label .req{color:var(--red);font-size:13px}
+.field-hint{font-size:11.5px;color:var(--text-3);margin-top:5px;line-height:1.45}
+.field-hint.warn{color:var(--accent-2)}
+
+.input,textarea.input,select.input{
+  width:100%;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  padding:12px 13px;
+  font-size:14.5px;color:var(--text);
+  transition:border-color .2s,background .2s;
+  outline:none;
+}
+.input::placeholder,textarea.input::placeholder{color:var(--text-3)}
+.input:focus,textarea.input:focus,select.input:focus{
+  border-color:var(--accent);
+  background:var(--surface-2);
+}
+textarea.input{resize:none;min-height:80px;line-height:1.5}
+select.input{
+  appearance:none;-webkit-appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%236b6b76' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 14px center;
+  padding-right:36px;
+}
+
+/* 多选标签组 */
+.opt-grid{display:flex;flex-wrap:wrap;gap:7px}
+.opt-chip{
+  font-size:12.5px;padding:8px 13px;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:10px;color:var(--text-2);
+  transition:all .15s;font-weight:500;
+  user-select:none;
+}
+.opt-chip:active{transform:scale(.96)}
+.opt-chip.active{
+  background:var(--accent-soft);border-color:var(--accent);
+  color:var(--accent);
+}
+
+/* 状态单选 */
+.status-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:7px}
+.status-opt{
+  display:flex;align-items:center;justify-content:center;gap:5px;
+  padding:10px 8px;border-radius:10px;
+  background:var(--surface);border:1px solid var(--border);
+  font-size:12.5px;font-weight:500;color:var(--text-2);
+  transition:all .15s;
+}
+.status-opt:active{transform:scale(.97)}
+.status-opt.active{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+
+/* 收支类型 */
+.type-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.type-opt{
+  padding:18px 10px;border-radius:14px;text-align:center;
+  background:var(--surface);border:1px solid var(--border);
+  transition:all .15s;
+}
+.type-opt:active{transform:scale(.98)}
+.type-opt.active.income{background:var(--green-soft);border-color:var(--green)}
+.type-opt.active.expense{background:var(--red-soft);border-color:var(--red)}
+.type-opt .em{font-size:22px}
+.type-opt .t{font-size:13px;font-weight:600;margin-top:5px}
+.type-opt.active.income .t{color:var(--green)}
+.type-opt.active.expense .t{color:var(--red)}
+.type-opt .d{font-size:11px;color:var(--text-3);margin-top:2px}
+
+/* 录入须知 */
+.notice-box{
+  margin:8px 0 20px;
+  background:var(--surface-2);
+  border:1px solid var(--border);
+  border-left:3px solid var(--accent);
+  border-radius:var(--radius-sm);
+  padding:13px 14px;
+}
+.notice-box .nt{font-size:13px;font-weight:600;color:var(--accent);margin-bottom:8px;display:flex;align-items:center;gap:4px}
+.notice-box ol{list-style:none;counter-reset:n}
+.notice-box ol li{
+  counter-increment:n;font-size:12px;color:var(--text-2);
+  line-height:1.6;padding-left:20px;position:relative;
+}
+.notice-box ol li::before{
+  content:counter(n);position:absolute;left:0;top:0;
+  width:15px;height:15px;border-radius:50%;
+  background:var(--accent-soft);color:var(--accent);
+  font-size:10px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;
+  line-height:1;
+}
+
+/* 提交按钮 */
+.btn-submit{
+  width:100%;padding:15px;
+  background:linear-gradient(135deg,var(--accent),var(--accent-2));
+  color:#fff;font-size:15px;font-weight:700;
+  border-radius:var(--radius-sm);
+  letter-spacing:.5px;
+  box-shadow:0 8px 24px rgba(217,119,6,.25);
+  transition:transform .1s;
+}
+.btn-submit:active{transform:scale(.98)}
+.btn-secondary{
+  width:100%;padding:13px;margin-top:10px;
+  background:var(--surface);border:1px solid var(--border);
+  color:var(--text-2);font-size:14px;font-weight:500;
+  border-radius:var(--radius-sm);
+}
+
+/* ============ 记账列表 ============ */
+.acc-list{padding:0 14px}
+.acc-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius-sm);padding:12px 14px;
+  margin-bottom:8px;display:flex;align-items:center;gap:11px;
+}
+.acc-card .em{font-size:20px;width:38px;height:38px;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.acc-card.income .em{background:var(--green-soft)}
+.acc-card.expense .em{background:var(--red-soft)}
+.acc-card .info{flex:1;min-width:0}
+.acc-card .info .t1{font-size:13.5px;font-weight:600}
+.acc-card .info .t2{font-size:11px;color:var(--text-3);margin-top:2px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.acc-card .amt{font-size:15px;font-weight:700;white-space:nowrap}
+.acc-card.income .amt{color:var(--green)}
+.acc-card.expense .amt{color:var(--red)}
+
+/* 月度汇总 */
+.month-summary{
+  margin:0 14px 6px;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);padding:14px;
+  display:flex;align-items:center;justify-content:space-around;
+}
+.month-summary .item{text-align:center}
+.month-summary .item .v{font-size:18px;font-weight:700;letter-spacing:-.3px}
+.month-summary .item .l{font-size:10.5px;color:var(--text-3);margin-top:2px}
+.month-summary .item.income .v{color:var(--green)}
+.month-summary .item.expense .v{color:var(--red)}
+.month-summary .item.balance .v{color:var(--accent)}
+.month-summary .divider{width:1px;height:32px;background:var(--border)}
+
+/* ============ 筛选条 ============ */
+.filter-bar{
+  display:flex;gap:6px;padding:0 14px 10px;overflow-x:auto;
+  scrollbar-width:none;-ms-overflow-style:none;
+}
+.filter-bar::-webkit-scrollbar{display:none}
+.filter-chip{
+  flex-shrink:0;font-size:12px;padding:6px 13px;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:20px;color:var(--text-2);font-weight:500;
+  white-space:nowrap;
+}
+.filter-chip.active{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+
+/* ============ Toast ============ */
+.toast{
+  position:fixed;left:50%;top:50%;transform:translate(-50%,-50%) scale(.9);
+  background:rgba(30,30,35,.96);backdrop-filter:blur(20px);
+  border:1px solid rgba(255,255,255,.1);
+  padding:14px 22px;border-radius:14px;
+  font-size:14px;font-weight:500;color:#fff;
+  z-index:999;opacity:0;pointer-events:none;
+  transition:all .25s cubic-bezier(.34,1.56,.64,1);
+  box-shadow:0 12px 40px rgba(0,0,0,.25);
+  display:flex;align-items:center;gap:8px;
+}
+.toast.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
+.toast .em{font-size:18px}
+
+/* ============ 确认弹窗 ============ */
+.modal-mask{
+  position:fixed;inset:0;background:rgba(0,0,0,.4);
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  z-index:300;opacity:0;pointer-events:none;transition:opacity .2s;
+}
+.modal-mask.show{opacity:1;pointer-events:auto}
+.modal-box{
+  position:fixed;left:50%;top:50%;transform:translate(-50%,-50%) scale(.92);
+  width:82%;max-width:320px;
+  background:var(--surface);border:1px solid var(--border-strong);
+  border-radius:18px;padding:24px 22px 18px;
+  z-index:301;opacity:0;pointer-events:none;
+  transition:all .25s cubic-bezier(.34,1.56,.64,1);
+}
+.modal-box.show{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
+.modal-box .mt{font-size:16px;font-weight:600;text-align:center;margin-bottom:8px}
+.modal-box .md{font-size:13px;color:var(--text-2);text-align:center;line-height:1.5;margin-bottom:18px}
+.modal-box .mb{display:flex;gap:10px}
+.modal-box .mb button{
+  flex:1;padding:11px;border-radius:10px;font-size:14px;font-weight:600;
+}
+.modal-box .mb .cancel{background:var(--surface-2);color:var(--text-2);border:1px solid var(--border)}
+.modal-box .mb .ok{background:var(--red);color:#fff}
+
+/* ============ 浮动新增按钮 ============ */
+.fab{
+  position:fixed;right:16px;bottom:calc(var(--tab-h) + var(--safe-bottom) + 16px);
+  width:52px;height:52px;border-radius:50%;
+  background:linear-gradient(135deg,var(--accent),var(--accent-2));
+  color:#fff;font-size:26px;font-weight:300;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 8px 24px rgba(217,119,6,.35);
+  z-index:90;transition:transform .15s;
+}
+.fab:active{transform:scale(.92)}
+
+/* ============ 状态选择器(编辑用) ============ */
+.status-picker{
+  display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;
+}
+.status-picker .sp{
+  font-size:11.5px;padding:6px 10px;border-radius:8px;
+  background:var(--surface-2);border:1px solid var(--border);
+  color:var(--text-2);font-weight:500;
+}
+.status-picker .sp.active{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+
+/* ============ 编辑面板 ============ */
+.edit-sheet{
+  position:fixed;left:0;right:0;bottom:0;
+  background:var(--surface);
+  border-top:1px solid var(--border-strong);
+  border-radius:20px 20px 0 0;
+  padding:20px 18px calc(20px + var(--safe-bottom));
+  z-index:250;
+  transform:translateY(100%);
+  transition:transform .3s cubic-bezier(.32,.72,0,1);
+  max-height:80vh;overflow-y:auto;
+}
+.edit-sheet.show{transform:translateY(0)}
+.edit-sheet .grip{width:36px;height:4px;background:var(--border-strong);border-radius:2px;margin:0 auto 16px}
+.edit-sheet h3{font-size:15px;font-weight:600;margin-bottom:14px;text-align:center}
+
+/* 日期input适配 */
+input[type="date"].input{color-scheme:light}
+input[type="number"].input{-moz-appearance:textfield}
+input[type="number"].input::-webkit-outer-spin-button,
+input[type="number"].input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+
+/* 滚动隐藏 */
+::-webkit-scrollbar{width:0;height:0}
+
+/* 小屏微调 */
+@media(max-width:360px){
+  .stats-wrap{grid-template-columns:repeat(2,1fr)}
+  .stat-card .num{font-size:17px}
+}
+</style>
+</head>
+<body>
+
+<div class="status-spacer"></div>
+
+<!-- ========== 页面1：订单工作台 ========== -->
+<section id="page-orders" class="page active">
+  <div class="app-header">
+    <h1>🎨 绘画约稿工作台</h1>
+    <div class="sub">🗂️ 订单管理 · 🚨 交稿预警 · 💰 收支对账</div>
+    <span class="date-pill" id="todayPill"></span>
+  </div>
+
+  <!-- 置顶统计 -->
+  <div class="stats-wrap">
+    <div class="stat-card accent">
+      <div class="num" id="stTotal">0</div>
+      <div class="label">🖌️ 进行中</div>
+    </div>
+    <div class="stat-card green">
+      <div class="num" id="stDone">0</div>
+      <div class="label">✅ 已交付</div>
+    </div>
+    <div class="stat-card blue">
+      <div class="num" id="stIncome">0</div>
+      <div class="label">💎 本月收入</div>
+    </div>
+    <div class="stat-card purple">
+      <div class="num" id="stPending">0</div>
+      <div class="label">⏳ 待收尾款</div>
+    </div>
+  </div>
+
+  <!-- 预警条 -->
+  <div class="alert-bar hide" id="alertBar">
+    <span class="ico">⚠️</span>
+    <span class="txt" id="alertTxt"></span>
+  </div>
+
+  <!-- 筛选 -->
+  <div class="sec-title">
+    <h2>📋 订单列表</h2>
+    <span class="cnt" id="orderCnt"></span>
+  </div>
+  <div class="filter-bar" id="filterBar">
+    <button class="filter-chip active" data-filter="all">📂 全部</button>
+    <button class="filter-chip" data-filter="urgent">🔴 加急</button>
+    <button class="filter-chip" data-filter="pending">🅿️ 待开工</button>
+    <button class="filter-chip" data-filter="sketch">✏️ 线稿</button>
+    <button class="filter-chip" data-filter="color">🎨 上色</button>
+    <button class="filter-chip" data-filter="done">✅ 已交付</button>
+    <button class="filter-chip" data-filter="pause">⏸ 暂停</button>
+  </div>
+
+  <div class="order-list" id="orderList"></div>
+</section>
+
+<!-- ========== 页面2：新增订单 ========== -->
+<section id="page-neworder" class="page">
+  <div class="app-header">
+    <h1>📝 新建订单</h1>
+    <div class="sub">🛒 填写约稿信息，提交后自动排单</div>
+  </div>
+
+  <div class="form-wrap">
+    <div class="form-title">
+      <div class="emoji">🎨</div>
+      <h2>新建绘画约稿订单</h2>
+    </div>
+
+    <!-- 1 客户昵称 -->
+    <div class="field">
+      <div class="field-label">👤 客户昵称/ID <span class="req">*</span></div>
+      <input class="input" id="f_name" placeholder="例：666号" maxlength="30">
+      <div class="field-hint">方便区分客户，建议填写平台ID</div>
+    </div>
+
+    <!-- 2 稿件类型 -->
+    <div class="field">
+      <div class="field-label">🎨 稿件类型 <span class="req">*</span> <span style="font-weight:400;color:var(--text-3);font-size:11px">（可多选）</span></div>
+      <div class="opt-grid" id="f_types">
+        <span class="opt-chip" data-v="1Q">1Q</span>
+        <span class="opt-chip" data-v="2Q">2Q</span>
+        <span class="opt-chip" data-v="1半">1半</span>
+        <span class="opt-chip" data-v="2半">2半</span>
+        <span class="opt-chip" data-v="胖胖体一">🐻 胖胖体一</span>
+        <span class="opt-chip" data-v="胖胖体二">🐼 胖胖体二</span>
+        <span class="opt-chip" data-v="小鼻嘎正常体">🤏 小鼻嘎正常体</span>
+        <span class="opt-chip" data-v="包浆">🫧 包浆</span>
+        <span class="opt-chip" data-v="定制">💎 定制</span>
+        <span class="opt-chip" data-v="猫耳">🐱 猫耳</span>
+        <span class="opt-chip" data-v="饼干">🍪 饼干</span>
+        <span class="opt-chip" data-v="决策币">🪙 决策币</span>
+        <span class="opt-chip" data-v="美工">🖌️ 美工</span>
+        <span class="opt-chip" data-v="其他稿件">📦 其他稿件</span>
+      </div>
+    </div>
+
+    <!-- 3 总价 -->
+    <div class="field">
+      <div class="field-label">💵 约定总价（元）<span class="req">*</span></div>
+      <input class="input" id="f_total" type="number" inputmode="decimal" placeholder="填写双方协商总价格" min="0">
+    </div>
+
+    <!-- 4 定金 -->
+    <div class="field">
+      <div class="field-label">🟡 定金金额（元）</div>
+      <input class="input" id="f_deposit" type="number" inputmode="decimal" placeholder="无定金填0" min="0" value="0">
+    </div>
+
+    <!-- 5 尾款 -->
+    <div class="field">
+      <div class="field-label">🟢 尾款金额（元）</div>
+      <input class="input" id="f_balance" type="number" inputmode="decimal" placeholder="总价-定金，全款付清填0" min="0" value="0">
+    </div>
+
+    <!-- 6 截止日期 -->
+    <div class="field">
+      <div class="field-label">⏰ 交付截止日期 <span class="req">*</span></div>
+      <input class="input" id="f_deadline" type="date">
+      <div class="field-hint warn">⚠️ 必须填写！用于自动交稿预警（截止日期前24H提醒）</div>
+    </div>
+
+    <!-- 7 状态 -->
+    <div class="field">
+      <div class="field-label">🚦 当前订单状态</div>
+      <div class="status-grid" id="f_status">
+        <div class="status-opt active" data-v="待开工">🅿️ 待开工</div>
+        <div class="status-opt" data-v="线稿绘制">✏️ 线稿绘制</div>
+        <div class="status-opt" data-v="待客户确认">👀 待客户确认</div>
+        <div class="status-opt" data-v="上色细化">🎨 上色细化</div>
+        <div class="status-opt" data-v="终稿调整">🔧 终稿调整</div>
+        <div class="status-opt" data-v="✅已交付">✅ 已交付</div>
+        <div class="status-opt" data-v="⏸暂停延期">⏸ 暂停延期</div>
+      </div>
+    </div>
+
+    <!-- 8 标签 -->
+    <div class="field">
+      <div class="field-label">🏷️ 标签 <span style="font-weight:400;color:var(--text-3);font-size:11px">（可多选）</span></div>
+      <div class="opt-grid" id="f_tags">
+        <span class="opt-chip" data-v="加急单">🔴 加急单</span>
+        <span class="opt-chip" data-v="老客户">💜 老客户</span>
+        <span class="opt-chip" data-v="商用授权">🔵 商用授权</span>
+      </div>
+    </div>
+
+    <!-- 9 备注 -->
+    <div class="field">
+      <div class="field-label">📝 需求备注</div>
+      <textarea class="input" id="f_note" placeholder="客户要求、发色服装、参考图链接、修改限制、特殊设定"></textarea>
+    </div>
+
+    <!-- 录入须知 -->
+    <div class="notice-box">
+      <div class="nt">📌 录入须知</div>
+      <ol>
+        <li>💰 定金到账后再录入订单，安排排单</li>
+        <li>📅 协商延期务必更新【交付截止日期】</li>
+        <li>✅ 稿件交付完成，请及时将状态修改为【✅已交付】，防止持续收到预警提醒</li>
+      </ol>
+    </div>
+
+    <button class="btn-submit" id="btnSubmitOrder">✅ 确认创建订单</button>
+    <button class="btn-secondary" id="btnCancelOrder">↩️ 取消</button>
+  </div>
+</section>
+
+<!-- ========== 页面3：收支记账 ========== -->
+<section id="page-account" class="page">
+  <div class="app-header">
+    <h1>💰 收支记账</h1>
+    <div class="sub">📈 稿费收入 · 📉 创作支出 · 一目了然</div>
+  </div>
+
+  <!-- 录入表单 -->
+  <div class="form-wrap" style="padding-bottom:10px">
+    <div class="form-title">
+      <div class="emoji">💰</div>
+      <h2>收支记账录入</h2>
+    </div>
+
+    <div class="field">
+      <div class="field-label">🧾 收支类型 <span class="req">*</span></div>
+      <div class="type-grid" id="f_accType">
+        <div class="type-opt income active" data-v="income">
+          <div class="em">💵</div>
+          <div class="t">收入</div>
+          <div class="d">约稿稿费</div>
+        </div>
+        <div class="type-opt expense" data-v="expense">
+          <div class="em">💸</div>
+          <div class="t">支出</div>
+          <div class="d">耗材/会员/设备</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="field">
+      <div class="field-label">💰 金额（元）<span class="req">*</span></div>
+      <input class="input" id="f_accAmt" type="number" inputmode="decimal" placeholder="填写金额" min="0">
+    </div>
+
+    <div class="field">
+      <div class="field-label">🔗 关联订单 <span style="font-weight:400;color:var(--text-3);font-size:11px">（可选）</span></div>
+      <select class="input" id="f_accOrder">
+        <option value="">不关联</option>
+      </select>
+      <div class="field-hint">关联后方便对账，自动归集到对应客户</div>
+    </div>
+
+    <div class="field">
+      <div class="field-label">📝 备注</div>
+      <textarea class="input" id="f_accNote" placeholder="例：XX客户头像稿费" style="min-height:60px"></textarea>
+    </div>
+
+    <button class="btn-submit" id="btnSubmitAcc">✅ 确认记账</button>
+  </div>
+
+  <!-- 月度汇总 -->
+  <div class="sec-title">
+    <h2>📊 本月汇总</h2>
+    <span class="cnt" id="accMonth"></span>
+  </div>
+  <div class="month-summary">
+    <div class="item income">
+      <div class="v" id="mIncome">0</div>
+      <div class="l">💵 收入</div>
+    </div>
+    <div class="divider"></div>
+    <div class="item expense">
+      <div class="v" id="mExpense">0</div>
+      <div class="l">💸 支出</div>
+    </div>
+    <div class="divider"></div>
+    <div class="item balance">
+      <div class="v" id="mBalance">0</div>
+      <div class="l">💎 结余</div>
+    </div>
+  </div>
+
+  <!-- 记账列表 -->
+  <div class="sec-title">
+    <h2>📒 记账流水</h2>
+    <span class="cnt" id="accCnt"></span>
+  </div>
+  <div class="acc-list" id="accList"></div>
+</section>
+
+<!-- ========== 浮动按钮 ========== -->
+<button class="fab" id="fab">➕</button>
+
+<!-- ========== 编辑面板 ========== -->
+<div class="edit-sheet" id="editSheet">
+  <div class="grip"></div>
+  <h3>✏️ 编辑订单</h3>
+  <input type="hidden" id="editId">
+  <div class="field">
+    <div class="field-label">👤 客户昵称/ID</div>
+    <input class="input" id="edit_name" maxlength="30">
+  </div>
+  <div class="field">
+    <div class="field-label">💵 约定总价（元）</div>
+    <input class="input" id="edit_total" type="number" min="0">
+  </div>
+  <div class="field">
+    <div class="field-label">🟡 定金 / 🟢 尾款</div>
+    <div style="display:flex;gap:8px">
+      <input class="input" id="edit_deposit" type="number" min="0" placeholder="定金" style="flex:1">
+      <input class="input" id="edit_balance" type="number" min="0" placeholder="尾款" style="flex:1">
+    </div>
+  </div>
+  <div class="field">
+    <div class="field-label">⏰ 交付截止日期</div>
+    <input class="input" id="edit_deadline" type="date">
+  </div>
+  <div class="field">
+    <div class="field-label">🚦 订单状态</div>
+    <div class="status-picker" id="edit_status">
+      <span class="sp" data-v="待开工">🅿️ 待开工</span>
+      <span class="sp" data-v="线稿绘制">✏️ 线稿绘制</span>
+      <span class="sp" data-v="待客户确认">👀 待客户确认</span>
+      <span class="sp" data-v="上色细化">🎨 上色细化</span>
+      <span class="sp" data-v="终稿调整">🔧 终稿调整</span>
+      <span class="sp" data-v="✅已交付">✅ 已交付</span>
+      <span class="sp" data-v="⏸暂停延期">⏸ 暂停延期</span>
+    </div>
+  </div>
+  <div class="field">
+    <div class="field-label">📝 需求备注</div>
+    <textarea class="input" id="edit_note" style="min-height:70px"></textarea>
+  </div>
+  <button class="btn-submit" id="btnSaveEdit">💾 保存修改</button>
+  <button class="btn-secondary" id="btnCloseEdit">↩️ 取消</button>
+</div>
+
+<!-- ========== 弹窗 ========== -->
+<div class="modal-mask" id="modalMask"></div>
+<div class="modal-box" id="modalBox">
+  <div class="mt" id="modalT">确认删除</div>
+  <div class="md" id="modalD">删除后不可恢复</div>
+  <div class="mb">
+    <button class="cancel" id="modalCancel">取消</button>
+    <button class="ok" id="modalOk">删除</button>
+  </div>
+</div>
+
+<!-- ========== Toast ========== -->
+<div class="toast" id="toast"><span class="em" id="toastEm">✅</span><span id="toastTxt"></span></div>
+
+<!-- ========== 底部Tab ========== -->
+<nav class="tabbar">
+  <button class="tab active" data-page="orders">
+    <span class="ico">🗂️</span><span>订单</span>
+  </button>
+  <button class="tab" data-page="neworder">
+    <span class="ico">➕</span><span>新增</span>
+  </button>
+  <button class="tab" data-page="account">
+    <span class="ico">💰</span><span>记账</span>
+  </button>
+</nav>
+
+<script>
+/* ============ 数据层 ============ */
+const DB = {
+  orders: 'draw_orders_v1',
+  accounts: 'draw_accounts_v1'
+};
+function load(k){try{return JSON.parse(localStorage.getItem(k))||[]}catch(e){return[]}}
+function save(k,v){localStorage.setItem(k,JSON.stringify(v))}
+let orders = load(DB.orders);
+let accounts = load(DB.accounts);
+let currentFilter = 'all';
+
+/* ============ 工具 ============ */
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
+function fmt(n){return Number(n||0).toLocaleString('zh-CN')}
+function todayStr(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function daysLeft(deadline){
+  if(!deadline)return null;
+  const d1=new Date(todayStr()+'T00:00:00');
+  const d2=new Date(deadline+'T00:00:00');
+  return Math.round((d2-d1)/86400000);
+}
+function toast(txt,em='✅'){
+  const t=document.getElementById('toast');
+  document.getElementById('toastTxt').textContent=txt;
+  document.getElementById('toastEm').textContent=em;
+  t.classList.add('show');
+  clearTimeout(t._t);
+  t._t=setTimeout(()=>t.classList.remove('show'),1800);
+}
+
+/* 确认弹窗 */
+let modalCb=null;
+function confirmModal(title,desc,cb){
+  document.getElementById('modalT').textContent=title;
+  document.getElementById('modalD').textContent=desc;
+  document.getElementById('modalBox').classList.add('show');
+  document.getElementById('modalMask').classList.add('show');
+  modalCb=cb;
+}
+document.getElementById('modalCancel').onclick=()=>{
+  document.getElementById('modalBox').classList.remove('show');
+  document.getElementById('modalMask').classList.remove('show');
+  modalCb=null;
+};
+document.getElementById('modalOk').onclick=()=>{
+  document.getElementById('modalBox').classList.remove('show');
+  document.getElementById('modalMask').classList.remove('show');
+  if(modalCb)modalCb();
+};
+document.getElementById('modalMask').onclick=()=>{
+  document.getElementById('modalBox').classList.remove('show');
+  document.getElementById('modalMask').classList.remove('show');
+};
+
+/* ============ 页面切换 ============ */
+function goPage(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.page===name));
+  document.getElementById('fab').style.display = name==='orders'?'flex':'none';
+  window.scrollTo(0,0);
+  if(name==='orders')renderOrders();
+  if(name==='account')renderAccounts();
+}
+document.querySelectorAll('.tab').forEach(t=>{
+  t.onclick=()=>goPage(t.dataset.page);
+});
+document.getElementById('fab').onclick=()=>goPage('neworder');
+document.getElementById('btnCancelOrder').onclick=()=>goPage('orders');
+
+/* ============ 表单交互：多选chip ============ */
+function bindChips(containerId,single){
+  const c=document.getElementById(containerId);
+  c.querySelectorAll('.opt-chip,.status-opt,.type-opt').forEach(el=>{
+    el.onclick=()=>{
+      if(single){
+        c.querySelectorAll('.opt-chip,.status-opt,.type-opt').forEach(e=>e.classList.remove('active'));
+        el.classList.add('active');
+      }else{
+        el.classList.toggle('active');
+      }
+    };
+  });
+}
+bindChips('f_types',false);
+bindChips('f_status',true);
+bindChips('f_tags',false);
+bindChips('f_accType',true);
+
+/* ============ 提交订单 ============ */
+document.getElementById('btnSubmitOrder').onclick=()=>{
+  const name=document.getElementById('f_name').value.trim();
+  const types=[...document.querySelectorAll('#f_types .opt-chip.active')].map(e=>e.dataset.v);
+  const total=document.getElementById('f_total').value;
+  const deposit=document.getElementById('f_deposit').value||0;
+  const balance=document.getElementById('f_balance').value||0;
+  const deadline=document.getElementById('f_deadline').value;
+  const status=document.querySelector('#f_status .status-opt.active').dataset.v;
+  const tags=[...document.querySelectorAll('#f_tags .opt-chip.active')].map(e=>e.dataset.v);
+  const note=document.getElementById('f_note').value.trim();
+
+  if(!name){toast('请填写客户昵称/ID 👤','⚠️');return}
+  if(types.length===0){toast('请选择稿件类型 🎨','⚠️');return}
+  if(!total||Number(total)<=0){toast('请填写约定总价 💵','⚠️');return}
+  if(!deadline){toast('请选择交付截止日期 ⏰','⚠️');return}
+
+  const order={
+    id:uid(),name,types,total:Number(total),
+    deposit:Number(deposit),balance:Number(balance),
+    deadline,status,tags,note,
+    created:Date.now()
+  };
+  orders.unshift(order);
+  save(DB.orders,orders);
+  toast('订单创建成功','🎉');
+  resetOrderForm();
+  goPage('orders');
+};
+
+function resetOrderForm(){
+  document.getElementById('f_name').value='';
+  document.getElementById('f_total').value='';
+  document.getElementById('f_deposit').value='0';
+  document.getElementById('f_balance').value='0';
+  document.getElementById('f_deadline').value='';
+  document.getElementById('f_note').value='';
+  document.querySelectorAll('#f_types .opt-chip,#f_tags .opt-chip').forEach(e=>e.classList.remove('active'));
+  document.querySelectorAll('#f_status .status-opt').forEach((e,i)=>e.classList.toggle('active',i===0));
+}
+
+/* ============ 渲染订单 ============ */
+function statusClass(s){
+  const m={'待开工':'st-pending','线稿绘制':'st-sketch','待客户确认':'st-confirm','上色细化':'st-color','终稿调整':'st-final','✅已交付':'st-done','⏸暂停延期':'st-pause'};
+  return m[s]||'st-pending';
+}
+function statusEmoji(s){
+  const m={'待开工':'🅿️','线稿绘制':'✏️','待客户确认':'👀','上色细化':'🎨','终稿调整':'🔧','✅已交付':'✅','⏸暂停延期':'⏸'};
+  return m[s]||'📌';
+}
+function typeEmoji(t){
+  const m={'1Q':'🎯','2Q':'🎯','1半':'🖼️','2半':'🖼️','胖胖体一':'🐻','胖胖体二':'🐼','小鼻嘎正常体':'🤏','包浆':'🫧','定制':'💎','猫耳':'🐱','饼干':'🍪','决策币':'🪙','美工':'🖌️','其他稿件':'📦'};
+  return m[t]||'🎨';
+}
+function filterOrders(list){
+  if(currentFilter==='all')return list.filter(o=>o.status!=='✅已交付');
+  if(currentFilter==='urgent')return list.filter(o=>o.tags.includes('加急单')&&o.status!=='✅已交付');
+  if(currentFilter==='pending')return list.filter(o=>o.status==='待开工');
+  if(currentFilter==='sketch')return list.filter(o=>o.status==='线稿绘制'||o.status==='待客户确认');
+  if(currentFilter==='color')return list.filter(o=>o.status==='上色细化'||o.status==='终稿调整');
+  if(currentFilter==='done')return list.filter(o=>o.status==='✅已交付');
+  if(currentFilter==='pause')return list.filter(o=>o.status==='⏸暂停延期');
+  return list;
+}
+function renderOrders(){
+  const list=filterOrders(orders);
+  const el=document.getElementById('orderList');
+  document.getElementById('orderCnt').textContent=`共 ${list.length} 单`;
+
+  if(list.length===0){
+    el.innerHTML=`<div class="empty"><div class="emoji">🗂️</div><p>暂无订单<br>点击右下角 ➕ 创建第一单</p></div>`;
+    updateStats();
+    updateAlert();
+    return;
+  }
+
+  el.innerHTML=list.map(o=>{
+    const dl=daysLeft(o.deadline);
+    let dlHtml='';
+    if(o.status==='✅已交付'){
+      dlHtml=`<span class="deadline">🎉 已完成</span>`;
+    }else if(o.status==='⏸暂停延期'){
+      dlHtml=`<span class="deadline">⏸ 已暂停</span>`;
+    }else if(dl!==null){
+      if(dl<0)dlHtml=`<span class="deadline warn">🔴 已逾期 ${-dl} 天</span>`;
+      else if(dl===0)dlHtml=`<span class="deadline warn">🔴 今天截止</span>`;
+      else if(dl===1)dlHtml=`<span class="deadline warn">🔴 明天截止</span>`;
+      else if(dl<=2)dlHtml=`<span class="deadline soon">🟡 还剩 ${dl} 天</span>`;
+      else dlHtml=`<span class="deadline">📅 还剩 ${dl} 天</span>`;
+    }
+    const tagsHtml=o.tags.map(t=>{
+      const cls=t==='加急单'?'tag-urgent':t==='老客户'?'tag-vip':'tag-comm';
+      const em=t==='加急单'?'🔴 ':t==='老客户'?'💜 ':'🔵 ';
+      return `<span class="${cls}">${em}${t}</span>`;
+    }).join('');
+    const typesHtml=o.types.map(t=>`<span>${typeEmoji(t)} ${t}</span>`).join('');
+    const noteHtml=o.note?`<div class="note">💬 ${o.note.replace(/</g,'&lt;')}</div>`:'';
+    const isUrgent=o.tags.includes('加急单')&&o.status!=='✅已交付';
+    const statusEm=statusEmoji(o.status);
+
+    return `<div class="order-card ${isUrgent?'urgent':''}">
+      <div class="row1">
+        <div class="cname">👤 ${o.name}</div>
+        <div class="price">💵 ¥${fmt(o.total)} <span class="small">🟡${fmt(o.deposit)}/🟢${fmt(o.balance)}</span></div>
+      </div>
+      <div class="types">${typesHtml}</div>
+      <div class="row2">
+        ${dlHtml}
+        <span class="status-pill ${statusClass(o.status)}">${statusEm} ${o.status}</span>
+      </div>
+      ${tagsHtml?`<div class="tags">${tagsHtml}</div>`:''}
+      ${noteHtml}
+      <div class="actions">
+        <button class="primary" onclick="openEdit('${o.id}')">✏️ 编辑</button>
+        <button onclick="quickDone('${o.id}')">✅ 交付</button>
+        <button class="danger" onclick="delOrder('${o.id}')">🗑️ 删除</button>
+      </div>
+    </div>`;
+  }).join('');
+  updateStats();
+  updateAlert();
+}
+
+/* 筛选 */
+document.getElementById('filterBar').onclick=e=>{
+  if(e.target.classList.contains('filter-chip')){
+    document.querySelectorAll('.filter-chip').forEach(c=>c.classList.remove('active'));
+    e.target.classList.add('active');
+    currentFilter=e.target.dataset.filter;
+    renderOrders();
+  }
+};
+
+/* 快捷交付 */
+function quickDone(id){
+  const o=orders.find(x=>x.id===id);
+  if(!o)return;
+  o.status='✅已交付';
+  save(DB.orders,orders);
+  toast('已标记为已交付 🎉','✅');
+  renderOrders();
+}
+
+/* 删除订单 */
+function delOrder(id){
+  confirmModal('🗑️ 删除订单','删除后不可恢复，确定删除？',()=>{
+    orders=orders.filter(o=>o.id!==id);
+    save(DB.orders,orders);
+    toast('订单已删除','🗑️');
+    renderOrders();
+  });
+}
+
+/* ============ 编辑面板 ============ */
+function openEdit(id){
+  const o=orders.find(x=>x.id===id);
+  if(!o)return;
+  document.getElementById('editId').value=id;
+  document.getElementById('edit_name').value=o.name;
+  document.getElementById('edit_total').value=o.total;
+  document.getElementById('edit_deposit').value=o.deposit;
+  document.getElementById('edit_balance').value=o.balance;
+  document.getElementById('edit_deadline').value=o.deadline;
+  document.getElementById('edit_note').value=o.note||'';
+  document.querySelectorAll('#edit_status .sp').forEach(e=>e.classList.toggle('active',e.dataset.v===o.status));
+  document.getElementById('editSheet').classList.add('show');
+}
+document.getElementById('btnCloseEdit').onclick=()=>document.getElementById('editSheet').classList.remove('show');
+document.querySelectorAll('#edit_status .sp').forEach(e=>{
+  e.onclick=()=>{
+    document.querySelectorAll('#edit_status .sp').forEach(x=>x.classList.remove('active'));
+    e.classList.add('active');
+  };
+});
+document.getElementById('btnSaveEdit').onclick=()=>{
+  const id=document.getElementById('editId').value;
+  const o=orders.find(x=>x.id===id);
+  if(!o)return;
+  o.name=document.getElementById('edit_name').value.trim()||o.name;
+  o.total=Number(document.getElementById('edit_total').value)||o.total;
+  o.deposit=Number(document.getElementById('edit_deposit').value)||0;
+  o.balance=Number(document.getElementById('edit_balance').value)||0;
+  o.deadline=document.getElementById('edit_deadline').value||o.deadline;
+  o.note=document.getElementById('edit_note').value.trim();
+  const st=document.querySelector('#edit_status .sp.active');
+  if(st)o.status=st.dataset.v;
+  save(DB.orders,orders);
+  document.getElementById('editSheet').classList.remove('show');
+  toast('修改已保存 💾','✅');
+  renderOrders();
+};
+
+/* ============ 统计 ============ */
+function updateStats(){
+  const active=orders.filter(o=>o.status!=='✅已交付'&&o.status!=='⏸暂停延期');
+  const done=orders.filter(o=>o.status==='✅已交付');
+  const now=new Date();
+  const mIncome=accounts.filter(a=>a.type==='income'&&a.month===now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')).reduce((s,a)=>s+a.amount,0);
+  const pending=orders.filter(o=>o.status!=='✅已交付').reduce((s,o)=>s+Number(o.balance||0),0);
+  document.getElementById('stTotal').textContent=active.length;
+  document.getElementById('stDone').textContent=done.length;
+  document.getElementById('stIncome').textContent=fmt(mIncome);
+  document.getElementById('stPending').textContent='¥'+fmt(pending);
+}
+
+/* ============ 预警 ============ */
+function updateAlert(){
+  const bar=document.getElementById('alertBar');
+  const txt=document.getElementById('alertTxt');
+  const warns=orders.filter(o=>{
+    if(o.status==='✅已交付'||o.status==='⏸暂停延期')return false;
+    const dl=daysLeft(o.deadline);
+    return dl!==null&&dl<=1;
+  });
+  if(warns.length===0){
+    bar.classList.add('hide');
+    return;
+  }
+  bar.classList.remove('hide');
+  if(warns.length===1){
+    const o=warns[0];const dl=daysLeft(o.deadline);
+    const t=dl<0?`已逾期 ${-dl} 天`:dl===0?'今天截止':'明天截止';
+    txt.innerHTML=`<b>👤 ${o.name}</b> 的订单${t}，请尽快处理！🚨`;
+  }else{
+    txt.innerHTML=`有 <b>${warns.length}</b> 单即将到期或已逾期，请及时处理！🚨`;
+  }
+}
+
+/* ============ 记账 ============ */
+function refreshOrderSelect(){
+  const sel=document.getElementById('f_accOrder');
+  const cur=sel.value;
+  sel.innerHTML='<option value="">不关联</option>'+orders.map(o=>`<option value="${o.id}">${o.name} · ¥${fmt(o.total)}</option>`).join('');
+  sel.value=cur;
+}
+document.getElementById('btnSubmitAcc').onclick=()=>{
+  const type=document.querySelector('#f_accType .type-opt.active').dataset.v;
+  const amt=Number(document.getElementById('f_accAmt').value);
+  const oid=document.getElementById('f_accOrder').value;
+  const note=document.getElementById('f_accNote').value.trim();
+  if(!amt||amt<=0){toast('请填写金额 💰','⚠️');return}
+  const now=new Date();
+  accounts.unshift({
+    id:uid(),type,amount:amt,
+    orderId:oid||'',
+    orderName:oid?(orders.find(o=>o.id===oid)?.name||''):'',
+    note,month:now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0'),
+    date:todayStr(),created:Date.now()
+  });
+  save(DB.accounts,accounts);
+  document.getElementById('f_accAmt').value='';
+  document.getElementById('f_accNote').value='';
+  document.getElementById('f_accOrder').value='';
+  toast(type==='income'?'收入已记账 📈':'支出已记账 📉','💰');
+  renderAccounts();
+};
+
+function renderAccounts(){
+  refreshOrderSelect();
+  const now=new Date();
+  const cm=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  const mInc=accounts.filter(a=>a.type==='income'&&a.month===cm).reduce((s,a)=>s+a.amount,0);
+  const mExp=accounts.filter(a=>a.type==='expense'&&a.month===cm).reduce((s,a)=>s+a.amount,0);
+  document.getElementById('mIncome').textContent='¥'+fmt(mInc);
+  document.getElementById('mExpense').textContent='¥'+fmt(mExp);
+  document.getElementById('mBalance').textContent='¥'+fmt(mInc-mExp);
+  document.getElementById('accMonth').textContent=cm;
+  document.getElementById('accCnt').textContent=`共 ${accounts.length} 笔`;
+
+  const el=document.getElementById('accList');
+  if(accounts.length===0){
+    el.innerHTML=`<div class="empty"><div class="emoji">💰</div><p>暂无记账记录</p></div>`;
+    updateStats();
+    return;
+  }
+  el.innerHTML=accounts.map(a=>{
+    const em=a.type==='income'?'💵':'💸';
+    const sign=a.type==='income'?'+':'-';
+    const t1=a.note||(a.type==='income'?'💰 稿费收入':'💸 支出');
+    const t2=a.orderName?`🔗 ${a.orderName} · 📅 ${a.date}`:`📅 ${a.date}`;
+    return `<div class="acc-card ${a.type}">
+      <div class="em">${em}</div>
+      <div class="info">
+        <div class="t1">${t1}</div>
+        <div class="t2">${t2}</div>
+      </div>
+      <div class="amt">${sign}¥${fmt(a.amount)}</div>
+    </div>`;
+  }).join('');
+  updateStats();
+}
+
+/* 记账长按删除 */
+document.getElementById('accList').addEventListener('click',e=>{
+  const card=e.target.closest('.acc-card');
+  if(!card)return;
+  const idx=[...document.querySelectorAll('#accList .acc-card')].indexOf(card);
+  const a=accounts[idx];
+  if(!a)return;
+  confirmModal('🗑️ 删除记账',`确定删除这笔 ¥${a.amount} 的记录？`,()=>{
+    accounts.splice(idx,1);
+    save(DB.accounts,accounts);
+    toast('记录已删除','🗑️');
+    renderAccounts();
+  });
+});
+
+/* ============ 初始化 ============ */
+function init(){
+  // 日期pill
+  const d=new Date();
+  const week=['日','一','二','三','四','五','六'][d.getDay()];
+  document.getElementById('todayPill').textContent=
+    `${d.getMonth()+1}月${d.getDate()}日 周${week}`;
+  // 默认日期=今天
+  document.getElementById('f_deadline').value='';
+  // 渲染
+  
+  // 示例数据(预览)
+  if(orders.length===0){
+    orders=[
+      {id:'s1',name:'柠萌',types:['1Q','猫耳'],total:88,deposit:44,balance:44,deadline:new Date(Date.now()+1*86400000).toISOString().slice(0,10),status:'线稿绘制',tags:['加急单','老客户'],note:'粉色短发，猫耳发箍，参考图已发',created:Date.now()},
+      {id:'s2',name:'星河233',types:['2半','定制'],total:260,deposit:100,balance:160,deadline:new Date(Date.now()+5*86400000).toISOString().slice(0,10),status:'待开工',tags:['商用授权'],note:'双人半身，商用授权，需要源文件',created:Date.now()-1000},
+      {id:'s3',name:'阿伟',types:['胖胖体一'],total:50,deposit:50,balance:0,deadline:new Date(Date.now()-1*86400000).toISOString().slice(0,10),status:'上色细化',tags:['老客户'],note:'',created:Date.now()-2000}
+    ];
+    save(DB.orders,orders);
+  }
+  if(accounts.length===0){
+    const cm=new Date().getFullYear()+'-'+String(new Date().getMonth()+1).padStart(2,'0');
+    accounts=[
+      {id:'a1',type:'income',amount:44,orderId:'s1',orderName:'柠萌',note:'柠萌头像定金',month:cm,date:todayStr(),created:Date.now()},
+      {id:'a2',type:'income',amount:100,orderId:'s2',orderName:'星河233',note:'星河定制定金',month:cm,date:todayStr(),created:Date.now()-1000},
+      {id:'a3',type:'expense',amount:68,orderId:'',orderName:'',note:'Procreate笔刷会员',month:cm,date:todayStr(),created:Date.now()-2000}
+    ];
+    save(DB.accounts,accounts);
+  }
+
+  renderOrders();
+  renderAccounts();
+  // 每分钟检查预警
+  setInterval(updateAlert,60000);
+
+  // 通过URL参数进入指定页面（PWA快捷方式用）
+  const urlParams = new URLSearchParams(window.location.search);
+  const targetPage = urlParams.get('page');
+  if (targetPage && ['orders','neworder','account'].includes(targetPage)) {
+    goPage(targetPage);
+  }
+}
+init();
+
+// 注册 Service Worker（让APP可离线使用、可安装到桌面）
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js')
+    .then(reg => console.log('SW registered'))
+    .catch(err => console.log('SW failed', err));
+}
+</script>
+</body>
+</html>
